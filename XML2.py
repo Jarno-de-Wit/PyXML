@@ -32,7 +32,7 @@ class XML():
     @classmethod
     def XML_from_str(cls, data, return_data = False):
         self = cls() #Set up an XML object to return in the end
-        
+
         #Find the header position ----------------------------------------------
         header_end = 0
         while True:
@@ -68,9 +68,14 @@ class XML():
         b = self
         data = data[header_end:]
         data = data.strip(" ")
+        if data[0] != "<":
+            return (self.name, data[:data.index(f"</{self.name}>")]), data[data.index(f"</{self.name}>") + len(f"</{self.name}>"):]
         while data.index(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             child, data = cls.XML_from_str(data, return_data = True)
-            self.database.append(child) #Append the tag to the database
+            if isinstance(child, XML):
+                self.database.append(child) #Append the tag to the database
+            else:
+                self.attributes[child[0]] = child[1]
             data = data.strip(" ") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
         #Remove the end tag from the data --------------------------------------
@@ -100,7 +105,7 @@ class XML():
 
     def append(self, value):
         self.database.append(value)
-            
+
 
     def keys(self):
         keys = list(self.attributes.keys())
@@ -138,20 +143,27 @@ class XML():
                     out.append(item)
         return out
 
-    def write(self, file, depth = 0):
+    def write(self, file, xflr = False, depth = 0):
         if not hasattr(file, "write"):
             with open(file, "w", encoding = "utf-8-sig") as file:
                 file.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the header
+                if xflr:
+                    file.write("<!DOCTYPE explane>\n")
                 file.write(f"{depth * '  '}{self.header}\n")
                 for child in self.database:
-                    child.write(file, depth + 1)
+                    child.write(file, xflr, depth + 1)
                 if self.type == "long" or (self.type == "auto" and self.database):
                     file.write(f"{depth * '  '}</{self.name}>") #No \n at the end, as this is the first, and thus also the last item.
         else:
-            file.write(f"{depth * '  '}{self.header}\n")
+            if xflr:
+                file.write(f"{depth * '  '}<{self.name}>\n")
+                for attribute in self.attributes.items():
+                    file.write(f"{(depth + 1) * '  '}<{attribute[0]}>{attribute[1]}</{attribute[0]}>\n")
+            else:
+                file.write(f"{depth * '  '}{self.header}\n")
             for child in self.database:
-                child.write(file, depth + 1)
-            if self.type == "long" or (self.type == "auto" and self.database):
+                child.write(file, xflr, depth + 1)
+            if self.type == "long" or (self.type == "auto" and self.database) or (xflr and self.attributes):
                 file.write(f"{depth * '  '}</{self.name}>\n")
 
 
@@ -165,4 +177,3 @@ class XML():
             string = string + "/"
         string = string + ">"
         return string
-
