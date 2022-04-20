@@ -1,3 +1,6 @@
+"""
+XML Parser / Editor / Creator
+"""
 class XML():
     def __init__(self, name = "", tag_type = "auto"):
         self.name = name
