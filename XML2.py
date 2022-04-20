@@ -24,15 +24,11 @@ class XML():
                 data.pop()
         print(data)
         raise RuntimeError("Couldn't read XML File")
-        #XMLHeader = data[0]
-        #data = [line.rstrip("\n") for line in data[1:]] #Create a list of all lines of the XML structure, with the newlines removed.
-        #data = "".join(data)
-        #return cls.XML_from_str(data)
 
     @classmethod
     def XML_from_str(cls, data, return_data = False):
         self = cls() #Set up an XML object to return in the end
-        
+
         #Find the header position ----------------------------------------------
         header_end = 0
         while True:
@@ -100,11 +96,10 @@ class XML():
 
     def append(self, value):
         self.database.append(value)
-            
+
 
     def keys(self):
         keys = list(self.attributes.keys())
-        #keys.extend([i for i in range(len(self.database))])
         return keys
 
     def __str__(self):
@@ -124,7 +119,6 @@ class XML():
                 if value is None or item[attribute] == value:
                     return item
         return None #Return None if item not found
-        #raise KeyError(f"Combination not found: attribute = {attribute}, value = {value}")
 
     def get_filtered_all(self, attribute, value = None):
         """
@@ -165,4 +159,3 @@ class XML():
             string = string + "/"
         string = string + ">"
         return string
-
