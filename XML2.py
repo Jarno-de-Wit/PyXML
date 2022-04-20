@@ -25,7 +25,6 @@ class XML():
                     return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
             else:
                 data.pop()
-        print(data)
         raise RuntimeError("Couldn't read XML File")
 
     @classmethod
