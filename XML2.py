@@ -25,7 +25,6 @@ class XML():
                     return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
             else:
                 data.pop()
-        print(data)
         raise RuntimeError("Couldn't read XML File")
 
     @classmethod
@@ -36,22 +35,22 @@ class XML():
         header_end = 0
         while True:
             header_end = data.index(">", header_end + 1) #Search for the ">" header ender, starting from the spot after the previous position.
-            if not data[:header_end].count('"') % 2: #If the ">" was not encased by ", and thus was not part of a string:
+            if not data[:header_end].count('"') % 2: #If the ">" was not encased by double quotation marks, and thus was not part of a string / value:
                 header_end += 1 #Move the index over by 1, so it ends using [:header_end] as an index also includes the ">" itself
-                break #Break out of the while loop. The ">" has been found.
+                break #Break out of the while loop. The ">" has been found
 
         #Decode the header -----------------------------------------------------
         header_data = data[:header_end].removeprefix("<").removesuffix(">")
 
-        if header_data[-1] == "/" or header_data[-1] == "?":
+        if header_data[-1] == "/":
             self.type = "short"
-            header_data = header_data.removesuffix("/").removesuffix("?") #Remove the trailing "/" if it exists (which would indicate a short tag)
+            header_data = header_data.removesuffix("/") #Remove the trailing "/" if it exists (which would indicate a short tag)
         else:
             self.type == "long"
         header_data = header_data.split(" ", 1) #Split the header into: [0] The tag name; [1] The attribute list
         self.name = header_data[0] #Extract the tag name, by removing the leading "<"
         if len(header_data) == 2: #If the tag contained any attributes:
-            attributes = header_data[1].split('"') #Split the header data at each ", to separate the attributes from their data.
+            attributes = header_data[1].split('"') #Split the header data at each ", to separate the attributes from their value
             attr_names = attributes[0::2] #The names are given by all items index i=0+2n
             attr_data  = attributes[1::2] #The data  is  given by all items index i=1+2n
             for attr in zip(attr_names, attr_data):
@@ -63,8 +62,6 @@ class XML():
                 return self
 
         #Decode the body of the XML tag ----------------------------------------
-        global b
-        b = self
         data = data[header_end:]
         data = data.strip(" ")
         if data[0] != "<":
