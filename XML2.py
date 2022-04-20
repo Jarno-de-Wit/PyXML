@@ -8,7 +8,7 @@ class XML():
     @classmethod
     def XMLFile(cls, filepath = None):
         if not filepath:
-            return(XML())
+            return XML()
         else:
             with open(filepath, "r", encoding = "utf-8-sig") as file:
                 data = file.readlines() #Readlines is preferred in this case to be able to easily remove the XML header info
@@ -111,18 +111,19 @@ class XML():
         return f"<XML object {self.name}>"
 
     def __repr__(self):
-        return(f"<XML object {self.name} with keys {self.keys()} and {len(self.database)} children>")
+        return f"<XML object {self.name} with keys {self.keys()} and {len(self.database)} children>"
 
-    def get_filtered(self, attribute, value):
+    def get_filtered(self, attribute, value = None):
         """
         Returns the first item in the database, for which the value of "attribute" is equal to "value".
+        If value is None, returns the first item that has the given attribute.
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
         for item in self.database:
             if attribute in item.keys():
-                if item[attribute] == value:
-                    return(item)
-        return(None) #Return None if item not found
+                if value is None or item[attribute] == value:
+                    return item
+        return None #Return None if item not found
         #raise KeyError(f"Combination not found: attribute = {attribute}, value = {value}")
 
     def write(self, file, depth = 0):
@@ -151,5 +152,5 @@ class XML():
         if self.type == "short" or (self.type == "auto" and not self.database): #If the tag is of the short type, add the "/" to the end to signify this.
             string = string + "/"
         string = string + ">"
-        return(string)
+        return string
 
