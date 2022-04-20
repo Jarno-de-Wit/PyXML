@@ -126,6 +126,18 @@ class XML():
         return None #Return None if item not found
         #raise KeyError(f"Combination not found: attribute = {attribute}, value = {value}")
 
+    def get_filtered_all(self, attribute, value = None):
+        """
+        Returns all items in the database, for which the value of "attribute" is equal to "value".
+        If value is None, returns all items that have the given attribute.
+        """
+        out = []
+        for item in self.database:
+            if attribute in item.keys():
+                if value is None or item[attribute] == value:
+                    out.append(item)
+        return out
+
     def write(self, file, depth = 0):
         if not hasattr(file, "write"):
             with open(file, "w", encoding = "utf-8-sig") as file:
