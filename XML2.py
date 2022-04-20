@@ -1,5 +1,5 @@
 """
-XML Parser / Editor / Creator
+XML Parser / Editor / Creator with additional support for the XML format used by XFLR5
 """
 class XML():
     def __init__(self, name = "", tag_type = "auto"):
