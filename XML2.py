@@ -30,7 +30,7 @@ class XML():
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
-    def XML_from_str(cls, data, return_data = False):
+    def XML_from_str(cls, data, return_trailing = False):
         self = cls() #Set up an XML object to return in the end
 
         #Find the header position ----------------------------------------------
@@ -58,7 +58,7 @@ class XML():
             for attr in zip(attr_names, attr_data):
                 self.attributes[attr[0].replace("=", "").strip(" ")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
-            if return_data: #If requested, also return all unused "trailing" data
+            if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
             else:
                 return self
@@ -69,7 +69,7 @@ class XML():
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
-            child, data = cls.XML_from_str(data, return_data = True)
+            child, data = cls.XML_from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
             data = data.strip(" ") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
@@ -77,7 +77,7 @@ class XML():
         data = data.removeprefix(f"</{self.name}>")
 
         #Return whatever data is necessary
-        if return_data:
+        if return_trailing:
             return self, data
         else:
             return self
