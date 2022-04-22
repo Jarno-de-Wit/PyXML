@@ -1,6 +1,8 @@
 """
 XML Parser / Editor / Creator with additional support for the XML format used by XFLR5
 """
+import itertools as it
+
 class XML():
     def __init__(self, name = "", tag_type = "auto"):
         self.name = name
@@ -25,7 +27,7 @@ class XML():
                     return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
             else:
                 data.pop()
-        raise RuntimeError("Couldn't read XML File")
+        raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
     def XML_from_str(cls, data, return_data = False):
@@ -66,7 +68,9 @@ class XML():
         data = data.strip(" ")
         if data[0] != "<":
             return (self.name, data[:data.index(f"</{self.name}>")]), data[data.index(f"</{self.name}>") + len(f"</{self.name}>"):]
-        while data.index(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
+        while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
+            if index == -1:
+                raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             child, data = cls.XML_from_str(data, return_data = True)
             if isinstance(child, XML):
                 self.database.append(child) #Append the tag to the database
@@ -113,29 +117,55 @@ class XML():
     def __repr__(self):
         return f"<XML object {self.name} with keys {self.keys()} and {len(self.database)} children>"
 
-    def get_filtered(self, attribute, value = None):
+    def get_filtered(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
         Returns the first item in the database, for which the value of "attribute" is equal to "value".
         If value is None, returns the first item that has the given attribute.
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
-        for item in self.database:
+        for item in self.iter_database(recursion_depth, sort):
             if attribute in item.keys():
                 if value is None or item[attribute] == value:
                     return item
         return None #Return None if item not found
 
-    def get_filtered_all(self, attribute, value = None):
+    def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
         Returns all items in the database, for which the value of "attribute" is equal to "value".
         If value is None, returns all items that have the given attribute.
+        Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
         out = []
-        for item in self.database:
+        for item in self.iter_database(recursion_depth, sort):
             if attribute in item.keys():
                 if value is None or item[attribute] == value:
                     out.append(item)
         return out
+
+    def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
+        """
+        Returns a tuple of all nested items, nested up to a depth of 'recursion_depth'.
+        If recursion_depth is < 0; recursion is unlimited.
+        If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
+        If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
+        """
+        if sort and nested_tree:
+            return ((self,),) + tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ()))
+        elif sort:
+            #Simply flatten the nested_tree sorted list
+            return sum(self.iter_database(recursion_depth, True, True), ())
+        else:
+            return (sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,))
+
+    @property
+    def max_depth(self):
+        """
+        Returns the maximum depth of any of its children
+        """
+        if not self.database:
+            return 0
+        else:
+            return 1 + max(child.max_depth for child in self.database)
 
     def write(self, file, xflr = False, depth = 0):
         if not hasattr(file, "write"):
