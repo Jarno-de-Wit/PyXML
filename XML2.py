@@ -27,7 +27,7 @@ class XML():
                     return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
             else:
                 data.pop()
-        raise RuntimeError("Couldn't read XML File")
+        raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
     def XML_from_str(cls, data, return_data = False):
@@ -66,7 +66,9 @@ class XML():
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
         data = data.strip(" ")
-        while data.index(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
+        while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
+            if index == -1:
+                raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             child, data = cls.XML_from_str(data, return_data = True)
             self.database.append(child) #Append the tag to the database
             data = data.strip(" ") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
