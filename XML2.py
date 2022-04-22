@@ -12,6 +12,9 @@ class XML():
 
     @classmethod
     def XMLFile(cls, filepath = None):
+        """
+        Loads an XML structure from a given file path
+        """
         if not filepath:
             return XML()
         else:
@@ -30,7 +33,13 @@ class XML():
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
-    def XML_from_str(cls, data, return_data = False):
+    def XML_from_str(cls, data, return_trailing = False):
+        """
+        Loads an XML structure from a string
+
+        data: string - string to be parsed to an XML structure. Should not contain any newline characters.
+        return_trailing: bool - determines whether the text after the parsed element should be returned.
+        """
         self = cls() #Set up an XML object to return in the end
 
         #Find the header position ----------------------------------------------
@@ -58,7 +67,7 @@ class XML():
             for attr in zip(attr_names, attr_data):
                 self.attributes[attr[0].replace("=", "").strip(" ")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
-            if return_data: #If requested, also return all unused "trailing" data
+            if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
             else:
                 return self
@@ -71,7 +80,7 @@ class XML():
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
-            child, data = cls.XML_from_str(data, return_data = True)
+            child, data = cls.XML_from_str(data, return_trailing = True)
             if isinstance(child, XML):
                 self.database.append(child) #Append the tag to the database
             else:
@@ -82,7 +91,7 @@ class XML():
         data = data.removeprefix(f"</{self.name}>")
 
         #Return whatever data is necessary
-        if return_data:
+        if return_trailing:
             return self, data
         else:
             return self
@@ -168,6 +177,12 @@ class XML():
             return 1 + max(child.max_depth for child in self.database)
 
     def write(self, file, xflr = False, depth = 0):
+        """
+        Write the XML structure to a given file
+
+        file: string / filepath - The path to the file the XML should be stored to.
+        depth: int - The indentation (in '  ') the XML tag should have by default.
+        """
         if not hasattr(file, "write"):
             with open(file, "w", encoding = "utf-8-sig") as file:
                 file.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the header
