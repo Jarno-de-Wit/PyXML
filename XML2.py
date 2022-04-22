@@ -12,6 +12,9 @@ class XML():
 
     @classmethod
     def XMLFile(cls, filepath = None):
+        """
+        Loads an XML structure from a given file path
+        """
         if not filepath:
             return XML()
         else:
@@ -31,6 +34,12 @@ class XML():
 
     @classmethod
     def XML_from_str(cls, data, return_trailing = False):
+        """
+        Loads an XML structure from a string
+
+        data: string - string to be parsed to an XML structure. Should not contain any newline characters.
+        return_trailing: bool - determines whether the text after the parsed element should be returned.
+        """
         self = cls() #Set up an XML object to return in the end
 
         #Find the header position ----------------------------------------------
@@ -163,6 +172,12 @@ class XML():
             return 1 + max(child.max_depth for child in self.database)
 
     def write(self, file, depth = 0):
+        """
+        Write the XML structure to a given file
+
+        file: string / filepath - The path to the file the XML should be stored to.
+        depth: int - The indentation (in '  ') the XML tag should have by default.
+        """
         if not hasattr(file, "write"):
             with open(file, "w", encoding = "utf-8-sig") as file:
                 file.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the header
