@@ -154,12 +154,12 @@ class XML():
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         if sort and nested_tree:
-            return ((self,),) + tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ()))
+            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ())) if recursion_depth else ())
         elif sort:
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            return (sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,))
+            return sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,)
 
     @property
     def max_depth(self):
