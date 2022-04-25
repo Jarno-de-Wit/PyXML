@@ -27,7 +27,7 @@ class XML():
                 elif data[0][1:2] == "!":
                     data.pop(0)
                 else:
-                    return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
+                    return cls.XML_from_str("".join(line.rstrip("\n").lstrip(" \t") for line in data))
             else:
                 data.pop()
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
