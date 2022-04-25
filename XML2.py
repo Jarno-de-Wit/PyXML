@@ -27,7 +27,7 @@ class XML():
                 elif data[0][1:2] == "!":
                     data.pop(0)
                 else:
-                    return cls.XML_from_str("".join(line.rstrip("\n") for line in data))
+                    return cls.XML_from_str("".join(line.rstrip("\n").lstrip(" \t") for line in data))
             else:
                 data.pop()
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
@@ -74,7 +74,7 @@ class XML():
 
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
-        data = data.strip(" ")
+        data = data.lstrip(" \t")
         if data[0] != "<":
             return (self.name, data[:data.index(f"</{self.name}>")]), data[data.index(f"</{self.name}>") + len(f"</{self.name}>"):]
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
@@ -85,7 +85,7 @@ class XML():
                 self.database.append(child) #Append the tag to the database
             else:
                 self.attributes[child[0]] = child[1]
-            data = data.strip(" ") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
+            data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
         #Remove the end tag from the data --------------------------------------
         data = data.removeprefix(f"</{self.name}>")
@@ -126,17 +126,42 @@ class XML():
     def __repr__(self):
         return f"<XML object {self.name} with keys {self.keys()} and {len(self.database)} children>"
 
+    def test_attr(self, attributes, values = None):
+        """
+        Tests if an XML object has the requested attributes, and if these attributes are set to the given values
+
+        attributes: str / iterable - A (list of) attribute names that should be checked
+        values: NoneType / str / iterable - The respective values the attributes should have. Set to None to accept any value as correct.
+
+        returns: Bool - True if criteria are met, False otherwise
+        """
+        #Make sure the 'attributes' variable is an iterable containing attr names
+        if isinstance(attributes, str) or not hasattr(attributes, "__iter__"):
+            attributes = (str(attributes),)
+        else:
+            #Turn any iterable into a tuple to avoid issues with generator
+            # expressions getting exhausted after a single use
+            attributes = tuple(attributes)
+
+        #Make sure the 'values' variable is an iterable containing values
+        if isinstance(values, str) or not hasattr(values, "__iter__"):
+            values = len(attributes) * (values,)
+
+        #Test if all given attributes exist
+        if all(attr in self.keys() for attr in attributes):
+            #Test if all given attributes have the requested value (or the value is irrelevant (None))
+            if all(self[attr] == val for attr, val in zip(attributes, values) if val is not None):
+                return True
+        #If any of the tests failed, return None
+        return False
+
     def get_filtered(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
         Returns the first item in the database, for which the value of "attribute" is equal to "value".
         If value is None, returns the first item that has the given attribute.
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
-        for item in self.iter_database(recursion_depth, sort):
-            if attribute in item.keys():
-                if value is None or item[attribute] == value:
-                    return item
-        return None #Return None if item not found
+        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
 
     def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
@@ -144,12 +169,7 @@ class XML():
         If value is None, returns all items that have the given attribute.
         Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
-        out = []
-        for item in self.iter_database(recursion_depth, sort):
-            if attribute in item.keys():
-                if value is None or item[attribute] == value:
-                    out.append(item)
-        return out
+        return list(tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value))
 
     def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
@@ -159,12 +179,12 @@ class XML():
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         if sort and nested_tree:
-            return ((self,),) + tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ()))
+            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ())) if recursion_depth else ())
         elif sort:
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            return (sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,))
+            return sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,)
 
     @property
     def max_depth(self):
