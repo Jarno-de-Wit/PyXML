@@ -216,6 +216,9 @@ class XML():
 
     @property
     def header(self):
+        """
+        Builds the header string for writing the XML tag to a file
+        """
         string = f"<{self.name}"
         for attr in self.attributes:
             value = str(self.attributes[attr]).removeprefix('"').removesuffix('"') #Turn the value into a string, without any " surrounding it.
