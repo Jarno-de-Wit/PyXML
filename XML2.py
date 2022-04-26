@@ -169,7 +169,19 @@ class XML():
         If value is None, returns all items that have the given attribute.
         Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
-        return list(tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value))
+        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)]
+
+    def find(self, name, recursion_depth = 1, sort = True):
+        """
+        Returns the first tag which has the given tag.name
+        """
+        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name), None)
+
+    def find_all(self, name, recursion_depth = 1, sort = True):
+        """
+        Returns all tags which have the given tag.name
+        """
+        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name]
 
     def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
@@ -228,6 +240,9 @@ class XML():
 
     @property
     def header(self):
+        """
+        Builds the header string for writing the XML tag to a file
+        """
         string = f"<{self.name}"
         for attr in self.attributes:
             value = str(self.attributes[attr]).removeprefix('"').removesuffix('"') #Turn the value into a string, without any " surrounding it.
