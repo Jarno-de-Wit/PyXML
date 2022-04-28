@@ -190,12 +190,13 @@ class XML():
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         if sort and nested_tree:
-            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True)if isinstance(child, XML) else ((child,),)  for child in self.database), fillvalue = ())) if recursion_depth else ())
+            return (tuple(self.database),) + tuple(sum(tags, ()) for tags in it.zip_longest(*(tag.iter_database(recursion_depth - 1, True, True) for tag in self.database if isinstance(tag, XML)), fillvalue = ()) if tags) if recursion_depth else ()
         elif sort:
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            return sum((child.iter_database(recursion_depth - 1, False) if isinstance(child, XML) else (child,) for child in self.database), (self,)) if recursion_depth else (self,)
+            #print(tuple(tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else () for tag in self.database), ())
+            return sum(((tag,) + tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else (tag,) for tag in self.database), ()) if recursion_depth else ()
 
     def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
@@ -212,12 +213,12 @@ class XML():
     @property
     def max_depth(self):
         """
-        Returns the maximum depth of any of its children
+        Returns the maximum depth of any of the nested tags
         """
-        if not self.database:
-            return 0
+        if tags := self.iter_tags(1):
+            return 1 + max(child.max_depth for child in tags)
         else:
-            return 1 + max(child.max_depth for child in self.database)
+            return 0
 
     def write(self, file, depth = 0):
         """
