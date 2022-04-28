@@ -220,27 +220,33 @@ class XML():
         else:
             return 0
 
-    def write(self, file, depth = 0):
+    def write(self, file, allow_compact = True, depth = 0):
         """
         Write the XML structure to a given file
 
         file: string / filepath - The path to the file the XML should be stored to.
+        allow_compact: bool - Determines whether XML tags containing only a single text based database entry are allowed to be written as a single line tag, instead of taking up three lines.
         depth: int - The indentation (in '  ') the XML tag should have by default.
         """
         if not hasattr(file, "write"):
-            with open(file, "w", encoding = "utf-8-sig") as file:
-                file.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the header
-                file.write(f"{depth * '  '}{self.header}\n")
-                for child in self.database:
-                    child.write(file, depth + 1)
-                if self.type == "long" or (self.type == "auto" and self.database):
-                    file.write(f"{depth * '  '}</{self.name}>") #No \n at the end, as this is the first, and thus also the last item.
+            with open(file, "w", encoding = "utf-8-sig") as f:
+                f.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the XML header
+                self.write(f, allow_compact, depth) #Write the contents of the tag(s) to the (now opened) file
         else:
-            file.write(f"{depth * '  '}{self.header}\n")
-            for child in self.database:
-                child.write(file, depth + 1)
+            file.write(f"{depth * '  '}{self.header}")
+            if  allow_compact and len(self.database) == 1 and not isinstance(self.database[0], XML):
+                file.write(f"{self.database[0]}")
+            else:
+                file.write("\n")
+                for child in self.database:
+                    if isinstance(child, XML):
+                        child.write(file, allow_compact, depth + 1)
+                    else:
+                        file.write(f"{(depth + 1) * '  '}{child}\n")
+                if self.type == "long" or (self.type == "auto" and self.database):
+                    file.write(f"{depth * '  '}")
             if self.type == "long" or (self.type == "auto" and self.database):
-                file.write(f"{depth * '  '}</{self.name}>\n")
+                file.write(f"</{self.name}>\n")
 
 
     @property
