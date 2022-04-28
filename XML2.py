@@ -78,7 +78,11 @@ class XML():
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
-            child, data = cls.XML_from_str(data, return_trailing = True)
+            if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
+                child = data[:tag_index]
+                data = data[tag_index:]
+            else:
+                child, data = cls.XML_from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
             data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
@@ -156,7 +160,7 @@ class XML():
         If value is None, returns the first item that has the given attribute.
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
-        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
+        return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
 
     def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
@@ -164,19 +168,19 @@ class XML():
         If value is None, returns all items that have the given attribute.
         Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
-        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)]
+        return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)]
 
     def find(self, name, recursion_depth = 1, sort = True):
         """
         Returns the first tag which has the given tag.name
         """
-        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name), None)
+        return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name), None)
 
     def find_all(self, name, recursion_depth = 1, sort = True):
         """
         Returns all tags which have the given tag.name
         """
-        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name]
+        return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name]
 
     def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
@@ -186,12 +190,24 @@ class XML():
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         if sort and nested_tree:
-            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ())) if recursion_depth else ())
+            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True)if isinstance(child, XML) else ((child,),)  for child in self.database), fillvalue = ())) if recursion_depth else ())
         elif sort:
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            return sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,)
+            return sum((child.iter_database(recursion_depth - 1, False) if isinstance(child, XML) else (child,) for child in self.database), (self,)) if recursion_depth else (self,)
+
+    def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
+        """
+        Returns a tuple of all nested tags, nested up to a depth of 'recursion_depth'.
+        If recursion_depth is < 0; recursion is unlimited.
+        If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
+        If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
+        """
+        if sort == True and nested_tree == True:
+            return tuple(tuple(tag for tag in branch if isinstance(tag, XML)) for branch in self.iter_database(recursion_depth, sort, nested_tree))
+        else:
+            return tuple(tag for tag in self.iter_database(recursion_depth, sort, nested_tree) if isinstance(tag, XML))
 
     @property
     def max_depth(self):
