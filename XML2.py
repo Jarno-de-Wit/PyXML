@@ -2,6 +2,9 @@
 XML Parser / Editor / Creator with additional support for the XML format used by XFLR5
 """
 import itertools as it
+import sys
+
+print("DeprecationWarning: This version of XML has been deprecated. Please switch to the version on the main branch.", file = sys.stderr)
 
 class XML():
     def __init__(self, name = "", tag_type = "auto"):
