@@ -4,10 +4,16 @@ XML Parser / Editor / Creator
 import itertools as it
 
 class XML():
-    def __init__(self, name = "", tag_type = "auto"):
+    def __init__(self, name = "", database = None, attributes = None, tag_type = "auto"):
         self.name = name
-        self.attributes = {}
-        self.database = []
+        if database is not None:
+            self.database = database
+        else:
+            self.database = []
+        if attributes is not None:
+            self.attributes = attributes
+        else:
+            self.attributes = {}
         self.type = tag_type
 
     @classmethod
@@ -219,6 +225,44 @@ class XML():
             return 1 + max(child.max_depth for child in tags)
         else:
             return 0
+
+    def reduce(self, recursion_depth = -1):
+        """
+        Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead.
+        """
+        if recursion_depth == 0:
+            return
+        for tag in self.iter_tags(1):
+            tag.reduce(recursion_depth - 1)
+        tag_names = [tag.name for tag in self.iter_tags(1)]
+        tag_count = len(self.database)
+        for tag_num, tag in enumerate(self.database):
+            if not isinstance(tag, XML): # Make sure text is not compressed (because it can't be)
+                continue
+            # Checks:
+            # Must contain only one items
+            # Contained item must be string
+            # Tag name must not occur multiple times (prevent preferenatial treatment)
+            # Tag name must not exist yet in attributes (prevent overwriting existing attributes)
+            if len(tag.database) == 1 and isinstance(tag.database[0], str) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
+                self.attributes[tag.name] = tag.database[0]
+                # Note: Reverse indexing used to circumvent index shift when removing items at the start
+                self.database.pop(-tag_count + tag_num)
+
+    def expand(self, recursion_depth = -1, force_expand = False):
+        """
+        Expands a tag into its long form, by turning all attributes to separate tags containing text instead.
+
+        force_expand: Bool - Determines whether the expansion should expand attributes if a nested tag with the same name already exists.
+        """
+        if recursion_depth == 0:
+            return
+        for tag in self.iter_tags(1):
+            tag.expand(recursion_depth - 1, force_expand)
+        tag_names = [tag.name for tag in self.iter_tags(1)]
+        for tag in list(self.attributes):
+            if force_expand or tag not in tag_names:
+                self.append(XML(tag, database = [self.attributes.pop(tag)]))
 
     def write(self, file, allow_compact = True, depth = 0):
         """
