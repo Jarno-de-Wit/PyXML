@@ -4,10 +4,16 @@ XML Parser / Editor / Creator
 import itertools as it
 
 class XML():
-    def __init__(self, name = "", tag_type = "auto"):
+    def __init__(self, name = "", database = None, attributes = None, tag_type = "auto"):
         self.name = name
-        self.attributes = {}
-        self.database = []
+        if database is not None:
+            self.database = database
+        else:
+            self.database = []
+        if attributes is not None:
+            self.attributes = attributes
+        else:
+            self.attributes = {}
         self.type = tag_type
 
     @classmethod
@@ -78,7 +84,11 @@ class XML():
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
-            child, data = cls.XML_from_str(data, return_trailing = True)
+            if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
+                child = data[:tag_index]
+                data = data[tag_index:]
+            else:
+                child, data = cls.XML_from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
             data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
@@ -156,7 +166,7 @@ class XML():
         If value is None, returns the first item that has the given attribute.
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
-        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
+        return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
 
     def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
@@ -164,19 +174,19 @@ class XML():
         If value is None, returns all items that have the given attribute.
         Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
-        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.test_attr(attribute, value)]
+        return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)]
 
     def find(self, name, recursion_depth = 1, sort = True):
         """
         Returns the first tag which has the given tag.name
         """
-        return next((tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name), None)
+        return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name), None)
 
     def find_all(self, name, recursion_depth = 1, sort = True):
         """
         Returns all tags which have the given tag.name
         """
-        return [tag for tag in self.iter_database(recursion_depth, sort) if tag.name == name]
+        return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name]
 
     def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
@@ -186,44 +196,108 @@ class XML():
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         if sort and nested_tree:
-            return ((self,),) + (tuple(sum(i, ()) for i in it.zip_longest(*(child.iter_database(recursion_depth - 1, True, True) for child in self.database), fillvalue = ())) if recursion_depth else ())
+            return (tuple(self.database),) + tuple(sum(tags, ()) for tags in it.zip_longest(*(tag.iter_database(recursion_depth - 1, True, True) for tag in self.database if isinstance(tag, XML)), fillvalue = ()) if tags) if recursion_depth else ()
         elif sort:
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            return sum((child.iter_database(recursion_depth - 1, False) for child in self.database), (self,)) if recursion_depth else (self,)
+            #print(tuple(tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else () for tag in self.database), ())
+            return sum(((tag,) + tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else (tag,) for tag in self.database), ()) if recursion_depth else ()
+
+    def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
+        """
+        Returns a tuple of all nested tags, nested up to a depth of 'recursion_depth'.
+        If recursion_depth is < 0; recursion is unlimited.
+        If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
+        If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
+        """
+        if sort == True and nested_tree == True:
+            return tuple(tuple(tag for tag in branch if isinstance(tag, XML)) for branch in self.iter_database(recursion_depth, sort, nested_tree))
+        else:
+            return tuple(tag for tag in self.iter_database(recursion_depth, sort, nested_tree) if isinstance(tag, XML))
+
+    @property
+    def tags(self):
+        """
+        Returns all XML tags contained in the database.
+        """
+        return tuple(tag for tag in self.database if isinstance(tag, XML))
 
     @property
     def max_depth(self):
         """
-        Returns the maximum depth of any of its children
+        Returns the maximum depth of any of the nested tags
         """
-        if not self.database:
-            return 0
+        if tags := self.tags:
+            return 1 + max(child.max_depth for child in tags)
         else:
-            return 1 + max(child.max_depth for child in self.database)
+            return 0
 
-    def write(self, file, depth = 0):
+    def reduce(self, recursion_depth = -1):
+        """
+        Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead.
+        """
+        if recursion_depth == 0:
+            return
+        for tag in self.tags:
+            tag.reduce(recursion_depth - 1)
+        tag_names = [tag.name for tag in self.tags]
+        tag_count = len(self.database)
+        for tag_num, tag in list(enumerate(self.database)):
+            if not isinstance(tag, XML): # Make sure text is not compressed (because it can't be)
+                continue
+            # Checks:
+            # Must contain only one items
+            # Contained item must be string
+            # Tag name must not occur multiple times (prevent preferenatial treatment)
+            # Tag name must not exist yet in attributes (prevent overwriting existing attributes)
+            if len(tag.database) == 1 and isinstance(tag.database[0], str) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
+                self.attributes[tag.name] = tag.database[0]
+                # Note: Reverse indexing used to circumvent index shift when removing items at the start
+                self.database.pop(-tag_count + tag_num)
+
+    def expand(self, recursion_depth = -1, force_expand = False):
+        """
+        Expands a tag into its long form, by turning all attributes to separate tags containing text instead.
+
+        force_expand: Bool - Determines whether the expansion should expand attributes if a nested tag with the same name already exists.
+        """
+        if recursion_depth == 0:
+            return
+        for tag in self.tags:
+            tag.expand(recursion_depth - 1, force_expand)
+        tag_names = [tag.name for tag in self.tags]
+        for tag in list(self.attributes):
+            if force_expand or tag not in tag_names:
+                self.append(XML(tag, database = [self.attributes.pop(tag)]))
+
+    def write(self, file, allow_compact = True, depth = 0):
         """
         Write the XML structure to a given file
 
         file: string / filepath - The path to the file the XML should be stored to.
+        allow_compact: bool - Determines whether XML tags containing only a single text based database entry are allowed to be written as a single line tag, instead of taking up three lines.
         depth: int - The indentation (in '  ') the XML tag should have by default.
         """
         if not hasattr(file, "write"):
-            with open(file, "w", encoding = "utf-8-sig") as file:
-                file.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the header
-                file.write(f"{depth * '  '}{self.header}\n")
-                for child in self.database:
-                    child.write(file, depth + 1)
-                if self.type == "long" or (self.type == "auto" and self.database):
-                    file.write(f"{depth * '  '}</{self.name}>") #No \n at the end, as this is the first, and thus also the last item.
+            with open(file, "w", encoding = "utf-8-sig") as f:
+                f.write('<?xml version="1.0" encoding="utf-8"?>\n') #Write the XML header
+                self.write(f, allow_compact, depth) #Write the contents of the tag(s) to the (now opened) file
         else:
-            file.write(f"{depth * '  '}{self.header}\n")
-            for child in self.database:
-                child.write(file, depth + 1)
+            file.write(f"{depth * '  '}{self.header}")
+            if  allow_compact and len(self.database) == 1 and not isinstance(self.database[0], XML):
+                file.write(f"{self.database[0]}")
+            else:
+                file.write("\n")
+                for child in self.database:
+                    if isinstance(child, XML):
+                        child.write(file, allow_compact, depth + 1)
+                    else:
+                        file.write(f"{(depth + 1) * '  '}{child}\n")
+                if self.type == "long" or (self.type == "auto" and self.database):
+                    file.write(f"{depth * '  '}")
             if self.type == "long" or (self.type == "auto" and self.database):
-                file.write(f"{depth * '  '}</{self.name}>\n")
+                file.write(f"</{self.name}>\n")
 
 
     @property
