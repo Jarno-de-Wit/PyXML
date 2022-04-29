@@ -236,7 +236,7 @@ class XML():
             tag.reduce(recursion_depth - 1)
         tag_names = [tag.name for tag in self.iter_tags(1)]
         tag_count = len(self.database)
-        for tag_num, tag in enumerate(self.database):
+        for tag_num, tag in list(enumerate(self.database)):
             if not isinstance(tag, XML): # Make sure text is not compressed (because it can't be)
                 continue
             # Checks:
