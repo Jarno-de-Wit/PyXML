@@ -217,11 +217,18 @@ class XML():
             return tuple(tag for tag in self.iter_database(recursion_depth, sort, nested_tree) if isinstance(tag, XML))
 
     @property
+    def tags(self):
+        """
+        Returns all XML tags contained in the database.
+        """
+        return tuple(tag for tag in self.database if isinstance(tag, XML))
+
+    @property
     def max_depth(self):
         """
         Returns the maximum depth of any of the nested tags
         """
-        if tags := self.iter_tags(1):
+        if tags := self.tags:
             return 1 + max(child.max_depth for child in tags)
         else:
             return 0
@@ -232,9 +239,9 @@ class XML():
         """
         if recursion_depth == 0:
             return
-        for tag in self.iter_tags(1):
+        for tag in self.tags:
             tag.reduce(recursion_depth - 1)
-        tag_names = [tag.name for tag in self.iter_tags(1)]
+        tag_names = [tag.name for tag in self.tags]
         tag_count = len(self.database)
         for tag_num, tag in list(enumerate(self.database)):
             if not isinstance(tag, XML): # Make sure text is not compressed (because it can't be)
@@ -257,9 +264,9 @@ class XML():
         """
         if recursion_depth == 0:
             return
-        for tag in self.iter_tags(1):
+        for tag in self.tags:
             tag.expand(recursion_depth - 1, force_expand)
-        tag_names = [tag.name for tag in self.iter_tags(1)]
+        tag_names = [tag.name for tag in self.tags]
         for tag in list(self.attributes):
             if force_expand or tag not in tag_names:
                 self.append(XML(tag, database = [self.attributes.pop(tag)]))
