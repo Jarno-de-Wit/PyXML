@@ -65,7 +65,7 @@ class XML():
         else:
             self.type == "long"
         header_data = header_data.split(" ", 1) #Split the header into: [0] The tag name; [1] The attribute list
-        self.name = header_data[0] #Extract the tag name, by removing the leading "<"
+        self.name = header_data[0] #Set the tag name
         if len(header_data) == 2: #If the tag contained any attributes:
             attributes = header_data[1].split('"') #Split the header data at each ", to separate the attributes from their value
             attr_names = attributes[0::2] #The names are given by all items index i=0+2n
@@ -118,10 +118,16 @@ class XML():
             self.attributes[item] = value
 
     def append(self, value):
+        """
+        Append a value (either a new XML tag, or a str) to the database
+        """
         self.database.append(value)
 
 
     def keys(self):
+        """
+        Returns the list of all attribute names
+        """
         keys = list(self.attributes.keys())
         return keys
 
@@ -135,10 +141,10 @@ class XML():
         """
         Tests if an XML object has the requested attributes, and if these attributes are set to the given values
 
-        attributes: str / iterable - A (list of) attribute names that should be checked
+        attributes: str / iterable - A (list of) attribute names that should be checked.
         values: NoneType / str / iterable - The respective values the attributes should have. Set to None to accept any value as correct.
 
-        returns: Bool - True if criteria are met, False otherwise
+        returns: Bool - True if criteria are met, False otherwise.
         """
         #Make sure the 'attributes' variable is an iterable containing attr names
         if isinstance(attributes, str) or not hasattr(attributes, "__iter__"):
@@ -162,15 +168,18 @@ class XML():
 
     def get_filtered(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
-        Returns the first item in the database, for which the value of "attribute" is equal to "value".
+        Returns the first item in the database, for which the value of "attribute" is equal to "value"
+
         If value is None, returns the first item that has the given attribute.
+
         Useful for example when there is a list of parts, each having an attribute "id", where you want to find a part with a specific id.
         """
         return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
 
     def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
         """
-        Returns all items in the database, for which the value of "attribute" is equal to "value".
+        Returns all items in the database, for which the value of "attribute" is equal to "value"
+
         If value is None, returns all items that have the given attribute.
         Recursion depth determines up to how many levels deep the search should go. Set to < 0 for unlimited recursion.
         """
@@ -190,7 +199,8 @@ class XML():
 
     def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
-        Returns a tuple of all nested items, nested up to a depth of 'recursion_depth'.
+        Returns a tuple of all nested items, nested up to a depth of 'recursion_depth'
+
         If recursion_depth is < 0; recursion is unlimited.
         If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
@@ -206,7 +216,8 @@ class XML():
 
     def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
-        Returns a tuple of all nested tags, nested up to a depth of 'recursion_depth'.
+        Returns a tuple of all nested tags, nested up to a depth of 'recursion_depth'
+
         If recursion_depth is < 0; recursion is unlimited.
         If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
@@ -219,7 +230,7 @@ class XML():
     @property
     def tags(self):
         """
-        Returns all XML tags contained in the database.
+        Returns all XML tags contained in the database
         """
         return tuple(tag for tag in self.database if isinstance(tag, XML))
 
@@ -235,7 +246,7 @@ class XML():
 
     def reduce(self, recursion_depth = -1):
         """
-        Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead.
+        Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead
         """
         if recursion_depth == 0:
             return
@@ -258,7 +269,7 @@ class XML():
 
     def expand(self, recursion_depth = -1, force_expand = False):
         """
-        Expands a tag into its long form, by turning all attributes to separate tags containing text instead.
+        Expands a tag into its long form, by turning all attributes to separate tags containing text instead
 
         force_expand: Bool - Determines whether the expansion should expand attributes if a nested tag with the same name already exists.
         """
