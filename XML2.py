@@ -71,7 +71,7 @@ class XML():
             attr_names = attributes[0::2] #The names are given by all items index i=0+2n
             attr_data  = attributes[1::2] #The data  is  given by all items index i=1+2n
             for attr in zip(attr_names, attr_data):
-                self.attributes[attr[0].replace("=", "").strip(" ")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
+                self.attributes[attr[0].strip(" =")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
