@@ -51,8 +51,10 @@ class XML():
         #Find the header position ----------------------------------------------
         header_end = 0
         while True:
-            header_end = data.index(">", header_end + 1) #Search for the ">" header ender, starting from the spot after the previous position.
-            if not data[:header_end].count('"') % 2: #If the ">" was not encased by double quotation marks, and thus was not part of a string / value:
+            header_end = data.find(">", header_end + 1) #Search for the ">" header ender, starting from the spot after the previous position.
+            if header_end == -1:
+                raise EOFError(f"Unclosed header tag")
+            if not cls.__in_str(data, header_end): #If the ">" was not encased by double quotation marks, and thus was not part of a string / value:
                 header_end += 1 #Move the index over by 1, so it ends using [:header_end] as an index also includes the ">" itself
                 break #Break out of the while loop. The ">" has been found
 
@@ -67,10 +69,8 @@ class XML():
         header_data = header_data.split(" ", 1) #Split the header into: [0] The tag name; [1] The attribute list
         self.name = header_data[0] #Set the tag name
         if len(header_data) == 2: #If the tag contained any attributes:
-            attributes = header_data[1].split('"') #Split the header data at each ", to separate the attributes from their value
-            attr_names = attributes[0::2] #The names are given by all items index i=0+2n
-            attr_data  = attributes[1::2] #The data  is  given by all items index i=1+2n
-            for attr in zip(attr_names, attr_data):
+            attributes = cls.__split_str(header_data[1]) #Split the header data at each " or ', to separate the attributes from their value
+            for attr in attributes:
                 self.attributes[attr[0].strip(" =")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
@@ -324,3 +324,35 @@ class XML():
             string = string + "/"
         string = string + ">"
         return string
+
+    def __split_str(string):
+        """
+        Splits a string at every " and ', but only if those characters are not in a string delimited by the other type of string symbol
+        """
+        out = []
+        while '"' in string or "'" in string: # While there are more attributes in the string
+            try:
+                if 0 <= string.find('"') < string.find("'") or string.find("'") == -1: # If " comes before ':
+                    attr, value, string = string.split('"', 2) # Split off the first attr
+                else:
+                    attr, value, string = string.split("'", 2)
+            except ValueError: # In case a closing character cannot be found:
+                raise
+                raise EOFError(f"Unclosed attribute value string: '{string}'")
+            out.append((attr, value))
+        return out
+
+    def __in_str(string, index):
+        """
+        Tests if a character / index is inside a 'string' (section delimited by quotation marks)
+
+        Returns True if in a string, False otherwise.
+        """
+        search_index = 0
+        while True:
+            search_index = min((i for i in [string.find('"', search_index), string.find("'", search_index)] if i >= 0), default = -1) # Search for the opening quotation
+            if search_index == -1 or index <= search_index: # If no opening quotation is present at all, or the index was before opening quotation:
+                return False
+            search_index = string.find(string[search_index], search_index + 1) + 1 # Search for the closing quotation (which has to be the same char as the opening quotation)
+            if search_index == 0 or index < search_index: # If either no closing quotation was found, or the index is before the closing quotation:
+                return True
