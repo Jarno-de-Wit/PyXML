@@ -33,7 +33,7 @@ class XML():
                 elif data[0][1:2] == "!":
                     data.pop(0)
                 else:
-                    return cls.XML_from_str("".join(line.rstrip("\n").lstrip(" \t") for line in data))
+                    return cls.XML_from_str("".join(data))
             else:
                 data.pop()
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
@@ -80,17 +80,17 @@ class XML():
 
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
-        data = data.lstrip(" \t")
+        data = data.lstrip(" \t\n")
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
-                child = data[:tag_index]
+                child = "\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n"))
                 data = data[tag_index:]
             else:
                 child, data = cls.XML_from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
-            data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
+            data = data.lstrip(" \t\n") #Strip any spacing that was between two XML tags.
 
         #Remove the end tag from the data --------------------------------------
         data = data.removeprefix(f"</{self.name}>")
