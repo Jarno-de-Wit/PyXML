@@ -71,7 +71,7 @@ class XML():
         if len(header_data) == 2: #If the tag contained any attributes:
             attributes = cls.__split_str(header_data[1]) #Split the header data at each " or ', to separate the attributes from their value
             for attr in attributes:
-                self.attributes[attr[0].strip(" =")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
+                self.attributes[attr[0].strip("= \t\n")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
