@@ -293,7 +293,7 @@ class XML():
                     if isinstance(child, XML):
                         child.write(file, allow_compact, depth + 1)
                     else:
-                        file.write(f"{(depth + 1) * '  '}{child}\n")
+                        file.write(f"{(depth + 1) * '  '}{child.replace(chr(10), chr(10) + (depth + 1) * '  ')}\n")
                 if self.type == "long" or (self.type == "auto" and self.database):
                     file.write(f"{depth * '  '}")
             if self.type == "long" or (self.type == "auto" and self.database):
