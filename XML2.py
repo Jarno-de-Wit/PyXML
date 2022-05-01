@@ -244,9 +244,11 @@ class XML():
         else:
             return 0
 
-    def reduce(self, recursion_depth = -1):
+    def reduce(self, recursion_depth = -1, reduce_newline = False):
         """
         Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead
+
+        reduce_newline: Bool - Determines whether multi-line text should be reduced as well.
         """
         if recursion_depth == 0:
             return
@@ -260,9 +262,10 @@ class XML():
             # Checks:
             # Must contain only one items
             # Contained item must be string
+            # String must not contain any newline
             # Tag name must not occur multiple times (prevent preferenatial treatment)
             # Tag name must not exist yet in attributes (prevent overwriting existing attributes)
-            if len(tag.database) == 1 and isinstance(tag.database[0], str) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
+            if len(tag.database) == 1 and isinstance(tag.database[0], str) and (not "\n" in tag.database[0] or reduce_newline) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
                 self.attributes[tag.name] = tag.database[0]
                 # Note: Reverse indexing used to circumvent index shift when removing items at the start
                 self.database.pop(-tag_count + tag_num)
