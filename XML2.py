@@ -244,7 +244,7 @@ class XML():
         else:
             return 0
 
-    def reduce(self, recursion_depth = -1, reduce_newline = False):
+    def reduce(self, recursion_depth = -1, reduce_newline = True):
         """
         Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead
 
