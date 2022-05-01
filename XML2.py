@@ -43,7 +43,7 @@ class XML():
         """
         Loads an XML structure from a string
 
-        data: string - string to be parsed to an XML structure. Should not contain any newline characters.
+        data: string - string to be parsed to an XML structure.
         return_trailing: bool - determines whether the text after the parsed element should be returned.
         """
         self = cls() #Set up an XML object to return in the end
