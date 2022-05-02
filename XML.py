@@ -321,7 +321,7 @@ class XML():
         """
         string = f"<{self.name}"
         for attr in self.attributes:
-            value = str(self.attributes[attr]).removeprefix('"').removesuffix('"') #Turn the value into a string, without any " surrounding it.
+            value = str(self.attributes[attr]) #Turn the value into a string, without any " surrounding it.
             string = " ".join([string, f'{attr}="{value}"'])
         if self.type == "short" or (self.type == "auto" and not self.database): #If the tag is of the short type, add the "/" to the end to signify this.
             string = string + "/"
