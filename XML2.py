@@ -166,7 +166,7 @@ class XML():
         #If any of the tests failed, return None
         return False
 
-    def get_filtered(self, attribute, value = None, recursion_depth = 1, sort = True):
+    def get_filtered(self, attribute, value = None, recursion_depth = -1, sort = True):
         """
         Returns the first item in the database, for which the value of "attribute" is equal to "value"
 
@@ -176,7 +176,7 @@ class XML():
         """
         return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)), None)
 
-    def get_filtered_all(self, attribute, value = None, recursion_depth = 1, sort = True):
+    def get_filtered_all(self, attribute, value = None, recursion_depth = -1, sort = True):
         """
         Returns all items in the database, for which the value of "attribute" is equal to "value"
 
@@ -185,13 +185,13 @@ class XML():
         """
         return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.test_attr(attribute, value)]
 
-    def find(self, name, recursion_depth = 1, sort = True):
+    def find(self, name, recursion_depth = -1, sort = True):
         """
         Returns the first tag which has the given tag.name
         """
         return next((tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name), None)
 
-    def find_all(self, name, recursion_depth = 1, sort = True):
+    def find_all(self, name, recursion_depth = -1, sort = True):
         """
         Returns all tags which have the given tag.name
         """
