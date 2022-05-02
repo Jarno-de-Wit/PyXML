@@ -33,7 +33,7 @@ class XML():
                 elif data[0][1:2] == "!":
                     data.pop(0)
                 else:
-                    return cls.from_str("".join(line.rstrip("\n").lstrip(" \t") for line in data))
+                    return cls.from_str("".join(data))
             else:
                 data.pop()
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
@@ -43,7 +43,7 @@ class XML():
         """
         Loads an XML structure from a string
 
-        data: string - string to be parsed to an XML structure. Should not contain any newline characters.
+        data: string - string to be parsed to an XML structure.
         return_trailing: bool - determines whether the text after the parsed element should be returned.
         """
         self = cls() #Set up an XML object to return in the end
@@ -71,7 +71,7 @@ class XML():
         if len(header_data) == 2: #If the tag contained any attributes:
             attributes = cls.__split_str(header_data[1]) #Split the header data at each " or ', to separate the attributes from their value
             for attr in attributes:
-                self.attributes[attr[0].strip(" =")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
+                self.attributes[attr[0].strip("= \t\n")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
@@ -80,17 +80,17 @@ class XML():
 
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
-        data = data.lstrip(" \t")
+        data = data.lstrip(" \t\n")
         while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
-                child = data[:tag_index]
+                child = "\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n"))
                 data = data[tag_index:]
             else:
                 child, data = cls.from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
-            data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
+            data = data.lstrip(" \t\n") #Strip any spacing that was between two XML tags.
 
         #Remove the end tag from the data --------------------------------------
         data = data.removeprefix(f"</{self.name}>")
@@ -244,9 +244,11 @@ class XML():
         else:
             return 0
 
-    def reduce(self, recursion_depth = -1):
+    def reduce(self, recursion_depth = -1, reduce_multiline = True):
         """
         Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead
+
+        reduce_multiline: Bool - Determines whether multi-line text should be reduced as well.
         """
         if recursion_depth == 0:
             return
@@ -260,9 +262,10 @@ class XML():
             # Checks:
             # Must contain only one items
             # Contained item must be string
+            # String must not contain any newline
             # Tag name must not occur multiple times (prevent preferenatial treatment)
             # Tag name must not exist yet in attributes (prevent overwriting existing attributes)
-            if len(tag.database) == 1 and isinstance(tag.database[0], str) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
+            if len(tag.database) == 1 and isinstance(tag.database[0], str) and (not "\n" in tag.database[0] or reduce_multiline) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
                 self.attributes[tag.name] = tag.database[0]
                 # Note: Reverse indexing used to circumvent index shift when removing items at the start
                 self.database.pop(-tag_count + tag_num)
@@ -304,7 +307,7 @@ class XML():
                     if isinstance(child, XML):
                         child.write(file, allow_compact, depth + 1)
                     else:
-                        file.write(f"{(depth + 1) * '  '}{child}\n")
+                        file.write(f"{(depth + 1) * '  '}{child.replace(chr(10), chr(10) + (depth + 1) * '  ')}\n")
                 if self.type == "long" or (self.type == "auto" and self.database):
                     file.write(f"{depth * '  '}")
             if self.type == "long" or (self.type == "auto" and self.database):
