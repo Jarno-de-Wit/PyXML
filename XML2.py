@@ -88,7 +88,7 @@ class XML():
                 child = data[:tag_index]
                 data = data[tag_index:]
             else:
-                child, data = cls.XML_from_str(data, return_trailing = True)
+                child, data = cls.from_str(data, return_trailing = True)
             self.database.append(child) #Append the tag to the database
             data = data.lstrip(" \t") #Strip any " " that are between two XML tags, that now suddenly are on the outside of the data.
 
