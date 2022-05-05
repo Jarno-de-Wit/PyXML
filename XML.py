@@ -71,7 +71,7 @@ class XML():
         if len(header_data) == 2: #If the tag contained any attributes:
             attributes = cls.__split_str(header_data[1]) #Split the header data at each " or ', to separate the attributes from their value
             for attr in attributes:
-                self.attributes[attr[0].strip("= \t\n")] = attr[1] #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
+                self.attributes[attr[0].strip("= \t\n")] = cls.decode(attr[1]) #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
         if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
@@ -85,7 +85,7 @@ class XML():
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
-                child = "\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n"))
+                child = cls.decode("\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n")))
                 data = data[tag_index:]
             else:
                 child, data = cls.from_str(data, return_trailing = True)
@@ -314,14 +314,14 @@ class XML():
         else:
             file.write(f"{depth * '  '}{self.header}")
             if  allow_compact and len(self.database) == 1 and not isinstance(self.database[0], XML):
-                file.write(f"{self.database[0]}")
+                file.write(f"{self.encode(self.database[0])}")
             else:
                 file.write("\n")
                 for child in self.database:
                     if isinstance(child, XML):
                         child.write(file, allow_compact, depth + 1)
                     else:
-                        file.write(f"{(depth + 1) * '  '}{child.replace(chr(10), chr(10) + (depth + 1) * '  ')}\n")
+                        file.write(f"{(depth + 1) * '  '}{self.encode(child.replace(chr(10), chr(10) + (depth + 1) * '  '))}\n")
                 if self.type == "long" or (self.type == "auto" and self.database):
                     file.write(f"{depth * '  '}")
             if self.type == "long" or (self.type == "auto" and self.database):
@@ -336,7 +336,7 @@ class XML():
         string = f"<{self.name}"
         for attr in self.attributes:
             value = str(self.attributes[attr]) #Turn the value into a string, without any " surrounding it.
-            string = " ".join([string, f'{attr}="{value}"'])
+            string = " ".join([string, f'{attr}="{self.encode(value)}"'])
         if self.type == "short" or (self.type == "auto" and not self.database): #If the tag is of the short type, add the "/" to the end to signify this.
             string = string + "/"
         string = string + ">"
@@ -373,3 +373,37 @@ class XML():
             search_index = string.find(string[search_index], search_index + 1) + 1 # Search for the closing quotation (which has to be the same char as the opening quotation)
             if search_index == 0 or index < search_index: # If either no closing quotation was found, or the index is before the closing quotation:
                 return True
+
+    @staticmethod
+    def encode(string):
+        """
+        Encodes a string such that all "forbidden" characters are correctly escaped
+
+        Note: It is not required (nor recommended) to pass the encoded string as the value for an attribute / database entry. Doing this anyway will lead to the strings being double-encoded, since the strings are automatically encoded during saving / writing.
+        """
+        chars = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
+        for char, encoded in chars.items():
+            string = string.replace(char, encoded)
+        return string
+
+    @staticmethod
+    def decode(string):
+        """
+        Decodes a string such that all escaped characters are replaced with their original characters
+
+        Note: It is not required (nor recommended) to call this function on the database entries / attribute values in the XML structure, as all strings are automatically decoded during parsing.
+        """
+        #Replace all "alternative" escape sequences with a singular case, which can then be more easily fixed with str.replace again.
+        alts = {"&#38;": "&amp;", "&#60;": "&lt;", "&#62;": "&gt;", "&#34;": "&quot;", "&#39;": "&apos;"}
+        for alt, base in alts.items():
+            string = string.replace(alt, base)
+        #Replace the base escape sequences with their original value
+        chars = {"&apos;": "'", "&quot;": '"', "&gt;": ">", "&lt;": "<", "&amp;": "&"}
+        for encoded, char in chars.items():
+            string = string.replace(encoded, char)
+        return string
+        # Add additional checks for &amp, such that it does not generate clashes if used in conjunction with &#38
+        # Do this by multi-splitting and "&".join()?
+
+        # Or, replace all other separators with the base separator first, so after that you can simply call str.replace()
+        # with the original base separator.
