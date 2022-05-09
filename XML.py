@@ -393,17 +393,12 @@ class XML():
 
         Note: It is not required (nor recommended) to call this function on the database entries / attribute values in the XML structure, as all strings are automatically decoded during parsing.
         """
-        #Replace all "alternative" escape sequences with a singular case, which can then be more easily fixed with str.replace again.
+        #Replace all "alternative" escape sequences with a singular "base" case, which can then be more easily replaced using str.replace, without having to worry about accidentally double-decoding a string / character.
         alts = {"&#38;": "&amp;", "&#60;": "&lt;", "&#62;": "&gt;", "&#34;": "&quot;", "&#39;": "&apos;"}
         for alt, base in alts.items():
             string = string.replace(alt, base)
-        #Replace the base escape sequences with their original value
+        #Replace the base escape sequences with their unencoded value
         chars = {"&apos;": "'", "&quot;": '"', "&gt;": ">", "&lt;": "<", "&amp;": "&"}
         for encoded, char in chars.items():
             string = string.replace(encoded, char)
         return string
-        # Add additional checks for &amp, such that it does not generate clashes if used in conjunction with &#38
-        # Do this by multi-splitting and "&".join()?
-
-        # Or, replace all other separators with the base separator first, so after that you can simply call str.replace()
-        # with the original base separator.
