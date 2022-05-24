@@ -244,19 +244,23 @@ class XML():
         else:
             return 0
 
-    def copy(self, recursive = True):
+    def copy(self, deepcopy = False):
         """
         Returns a copy of self
 
-        recursive: bool - Determines whether all nested tags should also be copied, or whether the original nested tag should be used in the copied tags' database. If false, a shallow copy will be performed.
-        Note: After copying, the new tag's attributes / database will always be a new list / dict. 'recursive' only applies to the tags contained within the database.
+        deepcopy: bool - Determines whether nested tags should also be copied, or whether the original nested tag should be used in the new database. If false, a shallow copy will be performed.
+        Note: deepcopy only applies to nested tags. The database / attributes will always be a separate object.
         """
-        attributes = self.attributes.copy()
-        if recursive:
-            database = [tag.copy() if isinstance(tag, XML) else tag for tag in self.database]
+        if deepcopy:
+            return XML(self.name, [tag.copy(True) if isinstance(tag, XML) else tag for tag in self.database], self.attributes.copy(), self.type)
         else:
-            database = self.database.copy()
-        return XML(self.name, database, attributes, self.type)
+            return XML(self.name, self.database.copy(), self.attributes.copy(), self.type)
+
+    def deepcopy(self):
+        """
+        Synonym for *.copy(True)
+        """
+        return self.copy(True)
 
     def reduce(self, recursion_depth = -1, reduce_multiline = True):
         """
