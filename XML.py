@@ -26,7 +26,7 @@ class XML():
         else:
             with open(filepath, "r", encoding = "utf-8-sig") as file:
                 data = file.readlines() #Readlines is preferred in this case to be able to easily remove the XML header info
-        for line in data:
+        while data:
             if data[0][0:1] == "<":
                 if data[0][1:2] == "?":
                     data.pop(0)
@@ -35,7 +35,7 @@ class XML():
                 else:
                     return cls.from_str("".join(data))
             else:
-                data.pop()
+                data.pop(0)
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
