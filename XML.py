@@ -14,7 +14,7 @@ class XML():
             self.attributes = attributes
         else:
             self.attributes = {}
-        self.type = tag_type
+        self.set_type(tag_type)
 
     @classmethod
     def XMLFile(cls, filepath = None):
@@ -301,6 +301,19 @@ class XML():
         for tag in list(self.attributes):
             if force_expand or tag not in tag_names:
                 self.append(XML(tag, database = [self.attributes.pop(tag)]))
+
+    def set_type(self, type_, recursion_depth = 0):
+        """
+        Sets the type of the tag to the specified value.
+
+        type_: str - The type the tag should get. Should be either "auto", "long" or "short".
+        """
+        if type_.lower() in ("auto", "long", "short"):
+            self.type = type_.lower()
+            for tag in self.iter_tags(recursion_depth):
+                tag.set_type(type_)
+        else:
+            raise ValueError(f"Invalid tag type '{type_}'")
 
     def write(self, file, allow_compact = True, depth = 0):
         """
