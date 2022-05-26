@@ -265,12 +265,12 @@ class XML():
         """
         Tries to minimise the number of nested tags by turning tags which only contain a single string value into an attribute instead
 
+        recursion_depth: int - The depth of children that should also attempt to reduce().
         reduce_multiline: Bool - Determines whether multi-line text should be reduced as well.
         """
-        if recursion_depth == 0:
-            return
-        for tag in self.tags:
-            tag.reduce(recursion_depth - 1)
+        for tag in reversed(self.iter_tags(recursion_depth)):
+            # Reduce the tags, but don't make them recursively call reduce on their children. All recursion is already done in iter_tags().
+            tag.reduce(0)
         tag_names = [tag.name for tag in self.tags]
         tag_count = len(self.database)
         for tag_num, tag in list(enumerate(self.database)):
@@ -291,12 +291,12 @@ class XML():
         """
         Expands a tag into its long form, by turning all attributes to separate tags containing text instead
 
+        recursion_depth: int - The depth of children that should also attempt to expand().
         force_expand: Bool - Determines whether the expansion should expand attributes if a nested tag with the same name already exists.
         """
-        if recursion_depth == 0:
-            return
-        for tag in self.tags:
-            tag.expand(recursion_depth - 1, force_expand)
+        for tag in self.iter_tags(recursion_depth):
+            tag.expand(0, force_expand)
+        # Get the tag names to be used to prevent name collisions (if required)
         tag_names = [tag.name for tag in self.tags]
         for tag in list(self.attributes):
             if force_expand or tag not in tag_names:
