@@ -211,7 +211,6 @@ class XML():
             #Simply flatten the nested_tree sorted list
             return sum(self.iter_database(recursion_depth, True, True), ())
         else:
-            #print(tuple(tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else () for tag in self.database), ())
             return sum(((tag,) + tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else (tag,) for tag in self.database), ()) if recursion_depth else ()
 
     def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
