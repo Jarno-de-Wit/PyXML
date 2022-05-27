@@ -4,7 +4,7 @@ XML Parser / Editor / Creator
 import itertools as it
 
 class XML():
-    def __init__(self, name = "", database = None, attributes = None, tag_type = "auto"):
+    def __init__(self, name = "", database = None, attributes = None, format = "auto"):
         self.name = name
         if database is not None:
             self.database = database
@@ -14,7 +14,7 @@ class XML():
             self.attributes = attributes
         else:
             self.attributes = {}
-        self.set_type(tag_type)
+        self.set_format(format)
 
     @classmethod
     def XMLFile(cls, filepath = None):
@@ -62,17 +62,17 @@ class XML():
         header_data = data[:header_end].removeprefix("<").removesuffix(">")
 
         if header_data[-1] == "/":
-            self.type = "short"
+            self.format = "short"
             header_data = header_data.removesuffix("/") #Remove the trailing "/" if it exists (which would indicate a short tag)
         else:
-            self.type == "long"
+            self.format == "long"
         header_data = header_data.split(" ", 1) #Split the header into: [0] The tag name; [1] The attribute list
         self.name = header_data[0] #Set the tag name
         if len(header_data) == 2: #If the tag contained any attributes:
             attributes = cls.__split_str(header_data[1]) #Split the header data at each " or ', to separate the attributes from their value
             for attr in attributes:
                 self.attributes[attr[0].strip("= \t\n")] = cls.decode(attr[1]) #Set the attribute in the attributes list. For the attribute name, any leading/trailing spaces, and the "=" sign are removed. The data is left unchanged, as anything withing the '"' was part of the string anyway.
-        if self.type == "short": #If the tag is of the short type, and thus consists only of a "header", return it now.
+        if self.format == "short": #If the tag is of the short format, and thus consists only of a "header", return it now.
             if return_trailing: #If requested, also return all unused "trailing" data
                 return self, data[header_end:]
             else:
@@ -251,9 +251,9 @@ class XML():
         Note: deepcopy only applies to nested tags. The database / attributes will always be a separate object.
         """
         if deepcopy:
-            return XML(self.name, [tag.copy(True) if isinstance(tag, XML) else tag for tag in self.database], self.attributes.copy(), self.type)
+            return XML(self.name, [tag.copy(True) if isinstance(tag, XML) else tag for tag in self.database], self.attributes.copy(), self.format)
         else:
-            return XML(self.name, self.database.copy(), self.attributes.copy(), self.type)
+            return XML(self.name, self.database.copy(), self.attributes.copy(), self.format)
 
     def deepcopy(self):
         """
@@ -302,18 +302,18 @@ class XML():
             if force_expand or tag not in tag_names:
                 self.append(XML(tag, database = [self.attributes.pop(tag)]))
 
-    def set_type(self, type_, recursion_depth = 0):
+    def set_format(self, format, recursion_depth = 0):
         """
-        Sets the type of the tag to the specified value.
+        Sets the format of the tag to the specified value.
 
-        type_: str - The type the tag should get. Should be either "auto", "long" or "short".
+        format: str - The format the tag should get. Should be either "auto", "long" or "short".
         """
-        if type_.lower() in ("auto", "long", "short"):
-            self.type = type_.lower()
+        if format.lower() in ("auto", "long", "short"):
+            self.format = format.lower()
             for tag in self.iter_tags(recursion_depth):
-                tag.set_type(type_)
+                tag.set_format(format)
         else:
-            raise ValueError(f"Invalid tag type '{type_}'")
+            raise ValueError(f"Invalid tag format '{format}'")
 
     def write(self, file, allow_compact = True, depth = 0):
         """
@@ -338,9 +338,9 @@ class XML():
                         child.write(file, allow_compact, depth + 1)
                     else:
                         file.write(f"{(depth + 1) * '  '}{self.encode(child.replace(chr(10), chr(10) + (depth + 1) * '  '))}\n")
-                if self.type == "long" or (self.type == "auto" and self.database):
+                if self.format == "long" or (self.format == "auto" and self.database):
                     file.write(f"{depth * '  '}")
-            if self.type == "long" or (self.type == "auto" and self.database):
+            if self.format == "long" or (self.format == "auto" and self.database):
                 file.write(f"</{self.name}>\n")
 
 
@@ -353,7 +353,7 @@ class XML():
         for attr in self.attributes:
             value = str(self.attributes[attr]) #Turn the value into a string, without any " surrounding it.
             string = " ".join([string, f'{attr}="{self.encode(value)}"'])
-        if self.type == "short" or (self.type == "auto" and not self.database): #If the tag is of the short type, add the "/" to the end to signify this.
+        if self.format == "short" or (self.format == "auto" and not self.database): #If the tag is of the short format, add the "/" to the end to signify this.
             string = string + "/"
         string = string + ">"
         return string
