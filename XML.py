@@ -104,7 +104,7 @@ class XML():
     def __getitem__(self, item):
         if item in self.attributes: #If the item is an attribute, return the attribute's value
             return self.attributes[item]
-        elif type(item) == int: #Elif the item is an integer index, return the corresponding child
+        elif isinstance(item, int): #Elif the item is an integer index, return the corresponding child
             return self.database[item]
         elif item in (itm.name for itm in self.database): #Elif the item is the name of any of the children, return the child.
             return self.database[[itm.name for itm in self.database].index(item)] #Find the index of the first item with the same name, and return the item at that index.
@@ -112,7 +112,7 @@ class XML():
             raise KeyError(item)
 
     def __setitem__(self, item, value):
-        if type(item) == int and item < len(self.database):
+        if isinstance(item, int) and item < len(self.database):
             self.database[item] = value
         else:
             self.attributes[item] = value
