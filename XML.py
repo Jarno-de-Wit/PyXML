@@ -197,34 +197,35 @@ class XML():
         """
         return [tag for tag in self.iter_tags(recursion_depth, sort) if tag.name == name]
 
-    def iter_database(self, recursion_depth = -1, sort = True, nested_tree = False):
+    def iter_database(self, recursion_depth = -1, sort = True):
         """
-        Returns a tuple of all nested items, nested up to a depth of 'recursion_depth'
+        Returns an iterator of all items in the database, up to the specified depth
 
         If recursion_depth is < 0; recursion is unlimited.
-        If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
-        If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
+        If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree / branch order.
         """
-        if sort and nested_tree:
-            return (tuple(self.database),) + tuple(sum(tags, ()) for tags in it.zip_longest(*(tag.iter_database(recursion_depth - 1, True, True) for tag in self.database if isinstance(tag, XML)), fillvalue = ()) if tags) if recursion_depth else ()
-        elif sort:
-            #Simply flatten the nested_tree sorted list
-            return sum(self.iter_database(recursion_depth, True, True), ())
-        else:
-            return sum(((tag,) + tag.iter_database(recursion_depth - 1, False) if isinstance(tag, XML) else (tag,) for tag in self.database), ()) if recursion_depth else ()
+        if sort: #Sorted generator (level wise)
+            database = self.database
+            while database and recursion_depth:
+                yield from database
+                database = tuple(it.chain.from_iterable([tag.database for tag in database if isinstance(tag, XML)]))
+                recursion_depth -= 1
+
+        else: #"Unsorted" generator (branch-wise)
+            for tag in self.database:
+                yield tag
+                if isinstance(tag, XML) and recursion_depth:
+                    yield from tag._iter_database(0, recursion_depth - 1, False)
 
     def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
         """
-        Returns a tuple of all nested tags, nested up to a depth of 'recursion_depth'
+        Returns an iterator of all nested tags, nested up to a depth of 'recursion_depth'
 
         If recursion_depth is < 0; recursion is unlimited.
         If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
         If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
-        if sort == True and nested_tree == True:
-            return tuple(tuple(tag for tag in branch if isinstance(tag, XML)) for branch in self.iter_database(recursion_depth, sort, nested_tree))
-        else:
-            return tuple(tag for tag in self.iter_database(recursion_depth, sort, nested_tree) if isinstance(tag, XML))
+        yield from (tag for tag in self.iter_database(recursion_depth, sort) if isinstance(tag, XML))
 
     @property
     def tags(self):
