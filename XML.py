@@ -81,7 +81,7 @@ class XML():
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
         data = data.lstrip(" \t\n")
-        while index := data.find(f"</{self.name}>"): #While the next part in the data is not this data's own end tag, there must be another child in between:
+        while index := data.find(f"</{self.name}"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
             if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
@@ -93,7 +93,10 @@ class XML():
             data = data.lstrip(" \t\n") #Strip any spacing that was between two XML tags.
 
         #Remove the end tag from the data --------------------------------------
-        data = data.removeprefix(f"</{self.name}>")
+        data = data.removeprefix(f"</{self.name}").lstrip(" \t")
+        if data[:1] != ">":
+            raise EOFError(f"Invalid closing tag (missing '>') for tag with name '{self.name}'")
+        data = data.removeprefix(">")
 
         #Return whatever data is necessary
         if return_trailing:
