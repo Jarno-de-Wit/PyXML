@@ -120,6 +120,15 @@ class XML():
         else:
             self.attributes[item] = value
 
+    def get(self, key, default = None, /):
+        """
+        Returns the value for key if key is present, else returns default.
+        """
+        try:
+            return self[key]
+        except KeyError:
+            return default
+
     def append(self, value):
         """
         Append a value (either a new XML tag, or a str) to the database
