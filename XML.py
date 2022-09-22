@@ -84,7 +84,12 @@ class XML():
         while index := data.find(f"</{self.name}"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
-            if tag_index := data.find("<"): #If the next part is text, and not an XML tag:
+            if not data.find("<!--"):
+                if (comment_end := data.find("-->", 4)) < 0:
+                    raise EOFError("Missing comment closing sequence (-->)")
+                child = data[:comment_end + 3] #No need
+                data = data[comment_end + 3:]
+            elif tag_index := data.find("<"): #If the next part is text, and not an XML tag:
                 child = cls.decode("\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n")))
                 data = data[tag_index:]
             else:
@@ -343,14 +348,14 @@ class XML():
         else:
             file.write(f"{depth * '  '}{self.header}")
             if  allow_compact and len(self.database) == 1 and not isinstance(self.database[0], XML):
-                file.write(f"{self.encode(self.database[0])}")
+                file.write(f"{self.encode(self.database[0], True)}")
             else:
                 file.write("\n")
                 for child in self.database:
                     if isinstance(child, XML):
                         child.write(file, allow_compact, depth + 1)
                     else:
-                        file.write(f"{(depth + 1) * '  '}{self.encode(child.replace(chr(10), chr(10) + (depth + 1) * '  '))}\n")
+                        file.write(f"{(depth + 1) * '  '}{self.encode(child.replace(chr(10), chr(10) + (depth + 1) * '  '), True)}\n")
                 if self.format == "long" or (self.format == "auto" and self.database):
                     file.write(f"{depth * '  '}")
             if self.format == "long" or (self.format == "auto" and self.database):
@@ -404,12 +409,14 @@ class XML():
                 return True
 
     @staticmethod
-    def encode(string):
+    def encode(string, ignore_comment = False):
         """
         Encodes a string such that all "forbidden" characters are correctly escaped
 
         Note: It is not required (nor recommended) to pass the encoded string as the value for an attribute / database entry. Doing this anyway will lead to the strings being double-encoded, since the strings are automatically encoded during saving / writing.
         """
+        if ignore_comment and len(string) >= 7 and string.startswith("<!--") and string.endswith("-->"):
+            return string
         chars = {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;"}
         for char, encoded in chars.items():
             string = string.replace(char, encoded)
