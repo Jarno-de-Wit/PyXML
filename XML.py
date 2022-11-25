@@ -388,7 +388,6 @@ class XML():
                 else:
                     attr, value, string = string.split("'", 2)
             except ValueError: # In case a closing character cannot be found:
-                raise
                 raise EOFError(f"Unclosed attribute value string: '{string}'")
             out.append((attr, value))
         return out
