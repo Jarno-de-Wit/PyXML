@@ -286,7 +286,7 @@ class XML():
         recursion_depth: int - The depth of children that should also attempt to reduce().
         reduce_multiline: Bool - Determines whether multi-line text should be reduced as well.
         """
-        for tag in reversed(self.iter_tags(recursion_depth)):
+        for tag in reversed(tuple(self.iter_tags(recursion_depth))):
             # Reduce the tags, but don't make them recursively call reduce on their children. All recursion is already done in iter_tags().
             tag.reduce(0)
         tag_names = [tag.name for tag in self.tags]
@@ -300,7 +300,7 @@ class XML():
             # String must not contain any newline
             # Tag name must not occur multiple times (prevent preferenatial treatment)
             # Tag name must not exist yet in attributes (prevent overwriting existing attributes)
-            if len(tag.database) == 1 and isinstance(tag.database[0], str) and (not "\n" in tag.database[0] or reduce_multiline) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
+            if not tag.attributes and len(tag.database) == 1 and isinstance(tag.database[0], str) and (not "\n" in tag.database[0] or reduce_multiline) and tag_names.count(tag.name) == 1 and not tag.name in self.attributes:
                 self.attributes[tag.name] = tag.database[0]
                 # Note: Reverse indexing used to circumvent index shift when removing items at the start
                 self.database.pop(-tag_count + tag_num)
