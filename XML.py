@@ -131,7 +131,7 @@ class XML():
         """
         try:
             return self[key]
-        except KeyError:
+        except (KeyError, IndexError):
             return default
 
     def append(self, value):
