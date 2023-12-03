@@ -116,7 +116,7 @@ class XML():
         elif isinstance(item, int): #Elif the item is an integer index, return the corresponding child
             return self.database[item]
         elif item in (itm.name for itm in self.tags): #Elif the item is the name of any of the children, return the child.
-            return self.database[[itm.name for itm in self.database].index(item)] #Find the index of the first item with the same name, and return the item at that index.
+            return self.database[[itm.name for itm in self.tags].index(item)] #Find the index of the first item with the same name, and return the item at that index.
         else:
             raise KeyError(item)
 
