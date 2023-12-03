@@ -17,7 +17,7 @@ class XML():
         self.set_format(format)
 
     @classmethod
-    def XMLFile(cls, filepath = None):
+    def XMLFile(cls, filepath = None, include_comments = False, return_trailing = False):
         """
         Loads an XML structure from a given file path
         """
@@ -33,13 +33,13 @@ class XML():
                 elif data[0][1:2] == "!":
                     data.pop(0)
                 else:
-                    return cls.from_str("".join(data))
+                    return cls.from_str("".join(data), include_comments, return_trailing)
             else:
                 data.pop(0)
         raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
 
     @classmethod
-    def from_str(cls, data, return_trailing = False):
+    def from_str(cls, data, include_comments = False, return_trailing = False):
         """
         Loads an XML structure from a string
 
@@ -87,14 +87,15 @@ class XML():
             if not data.find("<!--"):
                 if (comment_end := data.find("-->", 4)) < 0:
                     raise EOFError("Missing comment closing sequence (-->)")
-                child = data[:comment_end + 3] #No need
+                child = data[:comment_end + 3] if include_comments else None #If comments should not be included, set it to None to be ignored.
                 data = data[comment_end + 3:]
             elif tag_index := data.find("<"): #If the next part is text, and not an XML tag:
                 child = cls.decode("\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n")))
                 data = data[tag_index:]
             else:
-                child, data = cls.from_str(data, return_trailing = True)
-            self.database.append(child) #Append the tag to the database
+                child, data = cls.from_str(data, include_comments, True)
+            if child is not None:
+                self.database.append(child) #Append the tag to the database
             data = data.lstrip(" \t\n") #Strip any spacing that was between two XML tags.
 
         #Remove the end tag from the data --------------------------------------
