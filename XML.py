@@ -235,13 +235,12 @@ class XML():
                 if isinstance(tag, XML) and recursion_depth:
                     yield from tag._iter_database(0, recursion_depth - 1, False)
 
-    def iter_tags(self, recursion_depth = -1, sort = True, nested_tree = False):
+    def iter_tags(self, recursion_depth = -1, sort = True):
         """
         Returns an iterator of all nested tags, nested up to a depth of 'recursion_depth'
 
         If recursion_depth is < 0; recursion is unlimited.
         If sort is True, all items are returned sorted based on their nesting level. Else, all items are returned in a tree order.
-        If nested_tree is True, will not return a flat tuple, but will instead return a (one level) nested tuple of all items, based on their nesting level. Requires sort to be True.
         """
         yield from (tag for tag in self.iter_database(recursion_depth, sort) if isinstance(tag, XML))
 
