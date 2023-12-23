@@ -6,6 +6,8 @@ import itertools as it
 class XML():
     def __init__(self, name = "", database = None, attributes = None, format = "auto"):
         self.name = name
+        self.version = None
+        self.encoding = None
         if database is not None:
             self.database = database
         else:
@@ -25,18 +27,8 @@ class XML():
             return XML()
         else:
             with open(filepath, "r", encoding = "utf-8-sig") as file:
-                data = file.readlines() #Readlines is preferred in this case to be able to easily remove the XML header info
-        while data:
-            if data[0][0:1] == "<":
-                if data[0][1:2] == "?":
-                    data.pop(0)
-                elif data[0][1:2] == "!":
-                    data.pop(0)
-                else:
-                    return cls.from_str("".join(data), include_comments, return_trailing)
-            else:
-                data.pop(0)
-        raise RuntimeError("Couldn't read XML File. Does the file contain a valid XML structure?")
+                data = file.read()
+        return cls.from_str("".join(data), include_comments, return_trailing)
 
     @classmethod
     def from_str(cls, data, include_comments = False, return_trailing = False):
@@ -46,9 +38,12 @@ class XML():
         data: string - string to be parsed to an XML structure.
         return_trailing: bool - determines whether the text after the parsed element should be returned.
         """
+        data = data.lstrip(" \t\n")
         self = cls() #Set up an XML object to return in the end
 
         #Find the header position ----------------------------------------------
+        if data[0:1] != "<":
+            raise RuntimeError("No XML tag found. Does the file contain a valid XML structure?")
         header_end = 0
         while True:
             header_end = data.find(">", header_end + 1) #Search for the ">" header ender, starting from the spot after the previous position.
@@ -64,6 +59,11 @@ class XML():
         if header_data[-1] == "/":
             self.format = "short"
             header_data = header_data.removesuffix("/") #Remove the trailing "/" if it exists (which would indicate a short tag)
+        elif header_data[-1] == "?":
+            self.format = "xml header" # Setup a (temporary) format to signal to future code that this is not a standard XML tag and thus shouldn't be returned itself.
+            header_data = header_data.removesuffix("?")
+        elif header_data[0] == "!": # DOCTYPE declaration (will be ignored by parser)
+            return cls.from_str(data[header_end:], include_comments, return_trailing)
         else:
             self.format == "long"
         header_data = header_data.split(" ", 1) #Split the header into: [0] The tag name; [1] The attribute list
@@ -77,6 +77,14 @@ class XML():
                 return self, data[header_end:]
             else:
                 return self
+        elif self.format == "xml header":
+            xml_body, trailing = cls.from_str(data[header_end:], include_comments, True)
+            xml_body.version = self.get("version", None)
+            xml_body.encoding = self.get("encoding", None)
+            if return_trailing: # If requested, also return all unused "trailing" data
+                return xml_body, trailing
+            else:
+                return xml_body
 
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
