@@ -88,7 +88,6 @@ class XML():
 
         #Decode the body of the XML tag ----------------------------------------
         data = data[header_end:]
-        data = data.lstrip(" \t\n")
         while index := data.find(f"</{self.name}"): #While the next part in the data is not this data's own end tag, there must be another child in between:
             if index == -1:
                 raise EOFError(f"No valid closing tag found for tag with name '{self.name}'")
@@ -97,11 +96,17 @@ class XML():
                     raise EOFError("Missing comment closing sequence (-->)")
                 child = data[:comment_end + 3] if include_comments else None #If comments should not be included, set it to None to be ignored.
                 data = data[comment_end + 3:]
-            elif tag_index := data.find("<"): #If the next part is text, and not an XML tag:
-                child = cls.decode("\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n")))
+            elif not (tag_index := data.find("<")): # If the next entry is an XML tag
+                child, data = cls.from_str(data, include_comments, True)
+            elif not data[:tag_index].isspace(): #If the next part is not just completely whitespace.
+                # Only remove whitespace for multi-line text
+                if "\n" in data[:tag_index]:
+                    child = cls.decode("\n".join(line.strip(" \t") for line in data[:tag_index].rstrip(" \t\n").split("\n")))
+                else:
+                    child = cls.decode(data[:tag_index])
                 data = data[tag_index:]
             else:
-                child, data = cls.from_str(data, include_comments, True)
+                child = None
             if child is not None:
                 self.database.append(child) #Append the tag to the database
             data = data.lstrip(" \t\n") #Strip any spacing that was between two XML tags.
